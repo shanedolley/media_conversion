@@ -1,106 +1,186 @@
 #!/bin/bash
-
-total_count=$(wc -l < /conversions/tv.txt)
-line_count="$(($total_count + 0))"
-
-while [ $line_count -gt 0 ];
-do 
-    #SET ORIGINAL FILE VARIABLES
-    f2c=$(head -n 1 /conversions/tv.txt)
-    f_format=$(mediainfo --inform="General;%Video_Format_List%" "$f2c")
-    f_folder=$(mediainfo --inform="General;%FolderName%" "$f2c")
-    f_filename=$(mediainfo --inform="General;%FileName%" "$f2c")
-    f_duration=$(mediainfo --inform="General;%Duration%" "$f2c")
-    f_filesize=$(mediainfo --inform="General;%FileSize%" "$f2c")
-    f_extension="${f2c##*.}"
+webhook_auth="Authorization:76ba4bf5-f9d0-4639-a45d-31d6b3a1ffe8"
+get_conversionStatus() {
+    convStatus=$(curl -s 'https://api.dolley.cloud/webhook/convert-status' --header "$webhook_auth")
+}
+get_fileToConvert() {
+    printf "Getting file information...\n"
+    convFileName=$(curl -s 'https://api.dolley.cloud/webhook/media-conversion' --header "$webhook_auth")
+    #set file variables
+    f_format=$(mediainfo --inform="General;%Video_Format_List%" "$convFileName")
+    f_folder=$(mediainfo --inform="General;%FolderName%" "$convFileName")
+    f_filename=$(mediainfo --inform="General;%FileName%" "$convFileName")
+    f_duration=$(mediainfo --inform="General;%Duration%" "$convFileName")
+    f_filesize=$(mediainfo --inform="General;%FileSize%" "$convFileName")
+    f_extension="${convFileName##*.}"
     nf_filename="$f_filename"".mp4"
-    #format details for database
-    db_folder="${f_folder//\'/\'\'}"
-    db_filename="${f_filename//\'/\'\'}"
-    db_newfilename="${nf_filename//\'/\'\'}"
-
-    #BEGIN TRANSCODING FILE
-    flatpak run --command=HandBrakeCLI fr.handbrake.ghb --preset-import-file "/conversions/H265.json" -Z "H265" -O -i "$f2c" -o "/conversions/converted/$f_filename.mp4" --encopts="gpu=any"
-    trans_code="$?"
-
-    #SET TRANSCODED FILE VARIABLES
-    nf_filesize=$(mediainfo --inform="General;%FileSize%" "/conversions/converted/$nf_filename")
-    nf_duration=$(mediainfo --inform="General;%Duration%" "/conversions/converted/$nf_filename")
+}
+get_transcodeFileDetails() {
+    nf_filesize=$(mediainfo --inform="General;%FileSize%" "/conversions/$nf_filename")
+    nf_duration=$(mediainfo --inform="General;%Duration%" "/conversions/$nf_filename")
     var_filesize=$((nf_filesize-f_filesize))
     var_duration=$((nf_duration-f_duration))
     min_duration=$(bc <<< "0.98*$f_duration/1")
     max_duration=$(bc <<< "1.02*$f_duration/1")
+}
+convertFile() {
+    printf "Beginning transcode of "$f_filename "\n"
+    ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y "/conversions/$nf_filename"
+    trans_code="$?"
+}
+process_convertedFile() {
+    #check if transcoded file exists
+    if [ -f "/conversions/$nf_filename" ]; then
+        
+        #check if transcode successful 
+        if [ $trans_code = 0 ] && [ -f "/conversions/$nf_filename" ];
+        then 
+            printf "Transcode completed.\n"
+            printf "Analysing transcoded file integrity...\n"
 
-    #CHECK IF TRANSCODE SUCCEEDED
-    if [ $trans_code = 0 ];
-    then 
-        echo "Analysing transcoded file integrity..."
+            #check transcoded file duration
+            if [ "$nf_duration" -gt "$min_duration" ]; then
+                if [ "$nf_duration" -lt "$max_duration" ]; then 
+                    #check transcoded file size
+                    if [ "$var_filesize" -lt 0 ]; then 
+                        #copy file
+                        printf "Renaming original file...\n"
+                        mv "$f_folder/$f_filename.$f_extension" "$f_folder/$f_filename.bak"
+                        printf "Copying transcoded file...\n"
+                        cp -f "/conversions/$nf_filename" "$f_folder/$nf_filename"
+                        copy1_result="$?"
 
-        #CHECK TRANSCODED FILE DURATION
-        if [ "$nf_duration" -gt "$min_duration" ]; then
-            if [ "$nf_duration" -lt "$max_duration" ]; then
-
-                #CHECK TRANSCODED FILE SIZE
-                if [ "$var_filesize" -lt 0 ]; then 
-
-                    #COPY FILE
-                    echo "Renaming original file..."
-                    mv "$f_folder/$f_filename.$f_extension" "$f_folder/$f_filename.bak"
-                    echo "Copying transcoded file..."
-                    cp -f "/conversions/converted/$nf_filename" "$f_folder/$nf_filename"
-                    copy1_result="$?"
-
-                    #VERIFY COPY SUCCESS
-                    if [ $copy1_result = 0 ]; then 
-                        echo "Cleaning up old files..."
-                        rm -f "$f_folder/$f_filename.bak"
-                        rm -f "/conversions/converted/$nf_filename"
-                        psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','Success: File converted and copied.')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
-                    else 
-                        echo "File copy unsuccessful. Trying again..."
-                        rm -f "$f_folder/$nf_filename"
-                        
-                        #TRY COPY AGAIN
-                        cp -f "/conversions/converted/$nf_filename" "$f_folder/$nf_filename"
-                        copy2_result="$?"
-                        
-                        #VERIFY COPY SUCCESS v2
-                        if [ $copy2_result = 0 ]; then
-                            echo "Cleaning up old files..."
+                        #verify copy success
+                        if [ $copy1_result = 0 ]; then 
+                            printf "Cleaning up...\n"
                             rm -f "$f_folder/$f_filename.bak"
-                            rm -f "/conversions/converted/$nf_filename"
-                            psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','Success: File converted and copied on second try.')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
+                            rm -f "/conversions/$nf_filename"
+                            dataMessage="Success: File converted and copied"
+                            curlCode="OK"
                         else 
-                            #ABORT - FILE COPY ERROR
-                            echo "File copy unsuccessful again. Aborting..."
+                            printf "File copy unsuccessful. Trying again...\n"
                             rm -f "$f_folder/$nf_filename"
-                            mv "$f_folder/$f_filename.bak" "$f_folder/$f_filename.$f_extension"
-                            psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','Aborted: File copy failed.')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
-                        fi
-                    fi 
+                            
+                            #try copy again
+                            cp -f "/conversions/$nf_filename" "$f_folder/$nf_filename"
+                            copy2_result="$?"
+                            
+                            #verify copy success v2
+                            if [ $copy2_result = 0 ]; then
+                                printf "Cleaning up old files...\n"
+                                rm -f "$f_folder/$f_filename.bak"
+                                rm -f "/conversions/$nf_filename"
+                                dataMessage="Success: File converted and copied on second try"
+                                curlCode="OK"
+                            else 
+                                #ABORT - FILE COPY ERROR
+                                printf "File copy unsuccessful again. Aborting...\n"
+                                rm -f "$f_folder/$nf_filename"
+                                mv "$f_folder/$f_filename.bak" "$f_folder/$f_filename.$f_extension"
+                                dataMessage="Aborted: File copy failed"
+                                curlCode="ERR"
+                            fi
+                        fi 
+                    else 
+                        #ABORT - NO DISKSPACE GAIN
+                        printf "No disk space gain from transcoding. Aborting...\n"
+                        rm -f "/conversions/$nf_filename"
+                        curlCode="OK"
+                        dataMessage="Aborted: No diskspace gained"
+                    fi
                 else 
-                    #ABORT - NO DISKSPACE GAIN
-                    echo "No disk space gain from transcoding. Aborting..."
-                    rm -f "/conversions/converted/$nf_filename"
-                    psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','Aborted: No diskspace gained.')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
-                fi
+                    #ERROR - DURATION DISCREPANCY
+                    printf "ERROR: Large duration discrepancy 1. Aborting...\n"
+                    curlCode="ERR"
+                    dataMessage="ERROR: Large duration variance - transcode failed"
+                fi 
             else 
                 #ERROR - DURATION DISCREPANCY
-                echo "ERROR: Large duration discrepancy. Aborting..."
-                psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','ERROR: Large duration variance - transcode failed')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
-            fi 
+                printf "ERROR: Large duration discrepancy 2. Aborting...\n"
+                curlCode="ERR"
+                dataMessage="ERROR: Large duration variance - transcode failed"
+            fi
         else 
-            #ERROR - DURATION DISCREPANCY
-            echo "ERROR: Large duration discrepancy. Aborting..."
-            psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','ERROR: Large duration variance - transcode failed')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
-        fi
+            printf "ERROR: Transcode failed\n"
+            curlCode="ERR"
+            dataMessage="ERROR: Transcode failed"
+        fi 
     else 
-        psql -c "insert into transcoding_results values ('$db_folder','$db_filename.$f_extension','$f_filesize','$f_duration','$db_newfilename','$nf_filesize','$nf_duration','$var_filesize','$var_duration','$trans_code','ERR: Transcode failed')" postgres://postgres.ckmjhueoqmogtqfkruzq:Omega47.blue!@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres
+        printf "ERROR: Transcoded file does not exist\n"
+        curlCode="ERR"
+        dataMessage="ERROR: Transcoded file does not exist"
+    fi
+}
+update_conversionStatus() {
+    curl -s --request POST 'https://api.dolley.cloud/webhook/convert-status?status='$1 --header "$webhook_auth"
+    printf "\n"
+}
+update_masterList() {
+    printf "Removing file from master list...\n"
+    curl -s 'https://api.dolley.cloud/webhook/remove-file' --header "$webhook_auth"
+    printf ".\n"
+}
+post_results() {
+    if [ $curlCode = "OK" ]; then
+        curl -s --request POST 'https://api.dolley.cloud/webhook/result' --header 'Content-Type: application/json' --header "$webhook_auth" --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"'"$nf_filename"'","new_filesize":"'"$nf_filesize"'","new_duration":"'"$nf_duration"'","var_filesize":"'"$var_filesize"'","var_duration":"'"$var_duration"'","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}'
     fi 
+    
+    if [ $curlCode = "ERR" ]; then
+        curl -s --request POST 'https://api.dolley.cloud/webhook/result' --header 'Content-Type: application/json' --header "$webhook_auth" --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"","new_filesize":"","new_duration":"","var_filesize":"","var_duration":"","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}'
+    fi
+    printf ".\n"
+}
+pausemuch() {
+    read -p "$1 Press enter to continue..."
+}
+reset_statuses() {
+    curlCode = ""
+    convStatus = ""
+    confFileName = ""
+}
 
-    #REMOVE FROM MASTER LIST
-    echo "Removing file from conversion master list..."
-    tail -n +2 "/conversions/tv.txt" > "/conversions/tv_temp.txt" && mv "/conversions/tv_temp.txt" "/conversions/tv.txt"
-  
-    line_count=$((line_count-1));
-done
+#begin process
+get_conversionStatus
+if [ $convStatus = "stopped" ]; then 
+    #printf "Conversion is currently disabled. Please enable to begin conversion process.\n"
+    #exit 
+    printf "\nConversion is currently disabled.\nWould you like to enable conversion and proceed?\n\n"
+    select yn in "Yes" "No"; do 
+        case $yn in
+            Yes ) update_conversionStatus waiting; break;;
+            No ) exit;;
+        esac 
+    done 
+fi 
+
+get_conversionStatus
+if [ $convStatus != "stopped" ]; then 
+    update_conversionStatus converting
+    while [ $convStatus != "stopped" ]
+        do 
+            get_conversionStatus
+            if [ $convStatus != "stopped" ]; then 
+                get_fileToConvert
+                #pausemuch "Last chance to cancel. You sure?"
+                if [ -f "$convFileName" ]; then 
+                    convertFile
+                    get_transcodeFileDetails
+                    process_convertedFile
+                    post_results
+                else 
+                    curlCode = "MISS"
+                    printf = "File does not exist. Transcode process skipped."
+                fi 
+                update_masterList
+                echo '--==|| Conversion Process Complete ||==--'
+                printf "\n\n"
+            else 
+                printf "Conversion has been disabled. Ending process...\n"
+                exit
+            fi
+            reset_statuses
+        done
+    update_conversionStatus waiting
+fi 
+
+
