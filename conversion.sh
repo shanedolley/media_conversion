@@ -134,12 +134,10 @@ pausemuch() {
     read -p "$1 Press enter to continue..."
 }
 reset_statuses() {
-    curlCode = ""
-    convStatus = ""
-    confFileName = ""
+    unset curlCode unset convStatus unset convFileName f_format f_folder f_filename f_duration f_filesize f_extension nf_filename nf_filesize nf_duration var_filesize var_duration min_duration max_duration trans_code copy1_result copy2_result dataMessage
 }
 
-#begin process
+# check for stopped status
 get_conversionStatus
 if [ $convStatus = "stopped" ]; then 
     #printf "Conversion is currently disabled. Please enable to begin conversion process.\n"
@@ -153,6 +151,7 @@ if [ $convStatus = "stopped" ]; then
     done 
 fi 
 
+# begin conversion process
 get_conversionStatus
 if [ $convStatus != "stopped" ]; then 
     update_conversionStatus converting
@@ -182,5 +181,3 @@ if [ $convStatus != "stopped" ]; then
         done
     update_conversionStatus waiting
 fi 
-
-
