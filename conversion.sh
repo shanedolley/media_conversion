@@ -24,7 +24,7 @@ get_transcodeFileDetails() {
     max_duration=$(bc <<< "1.02*$f_duration/1")
 }
 convertFile() {
-    printf "Beginning transcode of "$f_filename "\n"
+    printf "Beginning transcode of $f_filename \n"
     ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y "/conversions/$nf_filename"
     trans_code="$?"
 }
@@ -134,7 +134,7 @@ pausemuch() {
     read -p "$1 Press enter to continue..."
 }
 reset_statuses() {
-    unset curlCode unset convStatus unset convFileName f_format f_folder f_filename f_duration f_filesize f_extension nf_filename nf_filesize nf_duration var_filesize var_duration min_duration max_duration trans_code copy1_result copy2_result dataMessage
+    unset curlCode convFileName f_format f_folder f_filename f_duration f_filesize f_extension nf_filename nf_filesize nf_duration var_filesize var_duration min_duration max_duration trans_code copy1_result copy2_result dataMessage
 }
 
 # check for stopped status
@@ -172,7 +172,7 @@ if [ $convStatus != "stopped" ]; then
                 fi 
                 update_masterList
                 echo '--==|| Conversion Process Complete ||==--'
-                printf "\n\n"
+                printf "\n"
             else 
                 printf "Conversion has been disabled. Ending process...\n"
                 exit
