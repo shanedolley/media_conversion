@@ -25,7 +25,7 @@ get_transcodeFileDetails() {
 }
 convertFile() {
     printf "Beginning transcode of $f_filename \n"
-    ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y "/conversions/$nf_filename"
+    ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y -movflags +faststart "/conversions/$nf_filename"
     trans_code="$?"
 }
 process_convertedFile() {
