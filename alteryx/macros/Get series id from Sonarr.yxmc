@@ -1,0 +1,540 @@
+<?xml version="1.0"?>
+<AlteryxDocument yxmdVer="2023.2" RunE2="T">
+  <Nodes>
+    <Node ToolID="1">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.TextInput.TextInput">
+        <Position x="246" y="294" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <NumRows value="1" />
+          <Fields>
+            <Field name="URL" />
+          </Fields>
+          <Data>
+            <r>
+              <c>https://sonarr.dolley.cloud/api/v3/</c>
+            </r>
+          </Data>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="URL" size="2147483647" source="TextInput:" type="V_String" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxTextInput" />
+    </Node>
+    <Node ToolID="2">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Formula.Formula">
+        <Position x="426" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <FormulaFields>
+            <FormulaField expression="[URL]+'series?tvdbId='+ToString([tvdbId])+'&amp;includeSeasonImages=false'" field="URL" size="2147483647" type="V_String" />
+          </FormulaFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText><![CDATA[URL = [URL]+'series?tvdbId='+ToString([tvdbId])+'&includeSeasonImages=false'
+]]></DefaultAnnotationText>
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="URL" size="2147483647" source="Formula: [URL]+'series?tvdbId='+ToString([tvdbId])+'&amp;includeSeasonImages=false'" type="V_String" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFormula" />
+    </Node>
+    <Node ToolID="3">
+      <GuiSettings Plugin="AlteryxConnectorGui.Download.Download">
+        <Position x="522" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <URLField>URL</URLField>
+          <OutputMode>String</OutputMode>
+          <CodePage>65001</CodePage>
+          <EncodeURLs value="True" />
+          <Headers>
+            <NameValues>
+              <Item name="accept" value="application/json" />
+              <Item name="X-Api-Key" value="803565114950489881b1ab8b3ca5435b" />
+            </NameValues>
+            <Fields orderChanged="False">
+              <Field name="tvdbId" selected="False" />
+              <Field name="URL" selected="False" />
+              <Field name="*Unknown" selected="False" />
+            </Fields>
+          </Headers>
+          <Payload>
+            <HTTPAction>GET</HTTPAction>
+            <QueryStringBodyMode>Compose</QueryStringBodyMode>
+            <ComposeNameValues />
+            <ComposeFields orderChanged="False">
+              <Field name="tvdbId" selected="False" />
+              <Field name="URL" selected="False" />
+              <Field name="*Unknown" selected="False" />
+            </ComposeFields>
+          </Payload>
+          <numConnections>2</numConnections>
+          <Timeout>600</Timeout>
+          <EnableRPM value="False" />
+          <DcmAdvancedAuth value="False" />
+          <Password />
+          <UserName />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="URL" size="2147483647" source="Formula: [URL]+'series?tvdbId='+ToString([tvdbId])+'&amp;includeSeasonImages=false'" type="V_String" />
+            <Field name="DownloadData" size="1073741823" source="Download" type="V_WString" />
+            <Field name="DownloadHeaders" size="2147483647" source="Download" type="V_String" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxConnectorEngine.dll" EngineDllEntryPoint="AlteryxDownload" />
+    </Node>
+    <Node ToolID="4">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.JSONParse.JSONParse">
+        <Position x="618" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <JSON_Field>DownloadData</JSON_Field>
+          <IncludeInOutput value="False" />
+          <SingleField value="True" />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="URL" size="2147483647" source="Formula: [URL]+'series?tvdbId='+ToString([tvdbId])+'&amp;includeSeasonImages=false'" type="V_String" />
+            <Field name="DownloadHeaders" size="2147483647" source="Download" type="V_String" />
+            <Field name="JSON_Name" size="1073741823" source="JSON_Parse" type="V_WString" />
+            <Field name="JSON_ValueString" size="1073741823" source="JSON_Parse" type="V_WString" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxJSONParse" />
+    </Node>
+    <Node ToolID="5">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MacroInput.MacroInput">
+        <Position x="102" y="210" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <UseFileInput value="False" />
+          <Name>Input5</Name>
+          <Abbrev />
+          <ShowFieldMap value="False" />
+          <Optional value="False" />
+          <TextInput>
+            <Configuration>
+              <NumRows value="3" />
+              <Fields>
+                <Field name="tvdbId" />
+              </Fields>
+              <Data>
+                <r>
+                  <c>289079</c>
+                </r>
+                <r>
+                  <c>123456</c>
+                </r>
+                <r>
+                  <c>789789</c>
+                </r>
+              </Data>
+            </Configuration>
+          </TextInput>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <AnnotationText>Input</AnnotationText>
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMacroInput" />
+    </Node>
+    <Node ToolID="6">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AppendFields.AppendFields">
+        <Position x="330" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <CartesianMode>Allow</CartesianMode>
+          <SelectConfiguration>
+            <Configuration outputConnection="Output">
+              <OrderChanged value="False" />
+              <CommaDecimal value="False" />
+              <SelectFields>
+                <SelectField field="*Unknown" selected="True" />
+              </SelectFields>
+            </Configuration>
+          </SelectConfiguration>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="URL" size="2147483647" source="TextInput:" type="V_String" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxAppendFields" />
+    </Node>
+    <Node ToolID="7">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+        <Position x="174" y="210" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Mode>Simple</Mode>
+          <Simple>
+            <Operator>=</Operator>
+            <Field>tvdbId</Field>
+            <Operands>
+              <IgnoreTimeInDateTime>True</IgnoreTimeInDateTime>
+              <DateType>fixed</DateType>
+              <PeriodDate>2024-02-12 13:35:06</PeriodDate>
+              <PeriodType>
+              </PeriodType>
+              <PeriodCount>0</PeriodCount>
+              <StartDate>2024-02-12 13:35:06</StartDate>
+              <EndDate>2024-02-12 13:35:06</EndDate>
+              <Operand>289079</Operand>
+            </Operands>
+          </Simple>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText>[tvdbId] = 289079</DefaultAnnotationText>
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="True">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+          </RecordInfo>
+        </MetaInfo>
+        <MetaInfo connection="False">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+    </Node>
+    <Node ToolID="8">
+      <GuiSettings Plugin="AlteryxGuiToolkit.Questions.Tab.Tab">
+        <Position x="0" y="0" width="59" height="59" />
+      </GuiSettings>
+      <Properties>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="9">
+      <GuiSettings Plugin="AlteryxGuiToolkit.Questions.ControlParam.ControlParam">
+        <Position x="174" y="54" width="59" height="59" />
+      </GuiSettings>
+      <Properties>
+        <Configuration />
+        <Annotation DisplayMode="0">
+          <Name />
+          <AnnotationText>Control Parameter (9)</AnnotationText>
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="10">
+      <GuiSettings Plugin="AlteryxGuiToolkit.Action.Action">
+        <Position x="174" y="108" width="59" height="59" />
+      </GuiSettings>
+      <Properties>
+        <Configuration />
+        <Annotation DisplayMode="0">
+          <Name />
+          <AnnotationText>Update Value</AnnotationText>
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+    </Node>
+    <Node ToolID="11">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.Filter.Filter">
+        <Position x="690" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Expression>REGEX_Match([JSON_Name], '\d+.id')</Expression>
+          <Mode>Custom</Mode>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText>REGEX_Match([JSON_Name], '\d+.id')</DefaultAnnotationText>
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="True">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="URL" size="2147483647" source="Formula: [URL]+'series?tvdbId='+ToString([tvdbId])+'&amp;includeSeasonImages=false'" type="V_String" />
+            <Field name="DownloadHeaders" size="2147483647" source="Download" type="V_String" />
+            <Field name="JSON_Name" size="1073741823" source="JSON_Parse" type="V_WString" />
+            <Field name="JSON_ValueString" size="1073741823" source="JSON_Parse" type="V_WString" />
+          </RecordInfo>
+        </MetaInfo>
+        <MetaInfo connection="False">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="URL" size="2147483647" source="Formula: [URL]+'series?tvdbId='+ToString([tvdbId])+'&amp;includeSeasonImages=false'" type="V_String" />
+            <Field name="DownloadHeaders" size="2147483647" source="Download" type="V_String" />
+            <Field name="JSON_Name" size="1073741823" source="JSON_Parse" type="V_WString" />
+            <Field name="JSON_ValueString" size="1073741823" source="JSON_Parse" type="V_WString" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxFilter" />
+    </Node>
+    <Node ToolID="12">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.AlteryxSelect.AlteryxSelect">
+        <Position x="774" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <OrderChanged value="False" />
+          <CommaDecimal value="False" />
+          <SelectFields>
+            <SelectField field="tvdbId" selected="True" />
+            <SelectField field="JSON_ValueString" selected="True" rename="seriesId" />
+            <SelectField field="*Unknown" selected="False" />
+          </SelectFields>
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+        <MetaInfo connection="Output">
+          <RecordInfo>
+            <Field name="tvdbId" source="TextInput:" type="Int32" />
+            <Field name="seriesId" size="1073741823" source="JSON_Parse" type="V_WString" />
+          </RecordInfo>
+        </MetaInfo>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxSelect" />
+    </Node>
+    <Node ToolID="13">
+      <GuiSettings Plugin="AlteryxBasePluginsGui.MacroOutput.MacroOutput">
+        <Position x="894" y="222" />
+      </GuiSettings>
+      <Properties>
+        <Configuration>
+          <Name>Output13</Name>
+          <Abbrev />
+        </Configuration>
+        <Annotation DisplayMode="0">
+          <Name />
+          <AnnotationText>Output</AnnotationText>
+          <DefaultAnnotationText />
+          <Left value="False" />
+        </Annotation>
+      </Properties>
+      <EngineSettings EngineDll="AlteryxBasePluginsEngine.dll" EngineDllEntryPoint="AlteryxMacroOutput" />
+    </Node>
+  </Nodes>
+  <Connections>
+    <Connection>
+      <Origin ToolID="1" Connection="Output" />
+      <Destination ToolID="6" Connection="Source" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="7" Connection="True" />
+      <Destination ToolID="6" Connection="Targets" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="2" Connection="Output" />
+      <Destination ToolID="3" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="3" Connection="Output" />
+      <Destination ToolID="4" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="4" Connection="Output" />
+      <Destination ToolID="11" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="5" Connection="Output" />
+      <Destination ToolID="7" Connection="Input" />
+    </Connection>
+    <Connection name="#2">
+      <Origin ToolID="10" Connection="Action" />
+      <Destination ToolID="7" Connection="Action" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="6" Connection="Output" />
+      <Destination ToolID="2" Connection="Input" />
+    </Connection>
+    <Connection name="#1">
+      <Origin ToolID="9" Connection="Question" />
+      <Destination ToolID="10" Connection="Question" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="11" Connection="True" />
+      <Destination ToolID="12" Connection="Input" />
+    </Connection>
+    <Connection>
+      <Origin ToolID="12" Connection="Output" />
+      <Destination ToolID="13" Connection="Input" />
+    </Connection>
+  </Connections>
+  <Properties>
+    <Memory default="True" />
+    <GlobalRecordLimit value="0" />
+    <TempFiles default="True" />
+    <Annotation on="True" includeToolName="False" />
+    <ConvErrorLimit value="10" />
+    <ConvErrorLimit_Stop value="False" />
+    <CancelOnError value="False" />
+    <DisableBrowse value="False" />
+    <EnablePerformanceProfiling value="False" />
+    <RunWithE2 value="True" />
+    <PredictiveToolsCodePage value="1252" />
+    <DisableAllOutput value="False" />
+    <ShowAllMacroMessages value="False" />
+    <ShowConnectionStatusIsOn value="True" />
+    <ShowConnectionStatusOnlyWhenRunning value="True" />
+    <ZoomLevel value="0" />
+    <LayoutType>Horizontal</LayoutType>
+    <Constants>
+      <Constant>
+        <Namespace>Question</Namespace>
+        <Name>ControlParam.Control Parameter (9)</Name>
+        <Value />
+        <IsNumeric value="False" />
+      </Constant>
+    </Constants>
+    <MetaInfo>
+      <NameIsFileName value="True" />
+      <Name>Get series id from Sonarr</Name>
+      <Description />
+      <RootToolName />
+      <ToolVersion />
+      <ToolInDb value="False" />
+      <CategoryName />
+      <SearchTags />
+      <Author />
+      <Company />
+      <Copyright />
+      <DescriptionLink actual="" displayed="" />
+      <Example>
+        <Description />
+        <File />
+      </Example>
+      <WorkflowId value="c266074b-b9ec-4df0-8848-7c42e8104751" />
+      <Telemetry>
+        <PreviousWorkflowId value="1d514762-6cbc-44a3-9f2e-c28d7a38f6aa" />
+        <OriginWorkflowId value="1d514762-6cbc-44a3-9f2e-c28d7a38f6aa" />
+      </Telemetry>
+      <PlatformWorkflowId value="" />
+    </MetaInfo>
+    <Events>
+      <Enabled value="False" />
+    </Events>
+    <RuntimeProperties>
+      <Actions>
+        <NoCondition>
+          <Type>NoCondition</Type>
+          <Description>(Always Run)</Description>
+          <True>
+            <Action>
+              <Type>UpdateValue</Type>
+              <Description />
+              <ToolId value="10" />
+              <Mode>Simple</Mode>
+              <Variable />
+              <Replace value="False" />
+              <Destination>7/Simple/Operands/Operand</Destination>
+            </Action>
+          </True>
+        </NoCondition>
+      </Actions>
+      <Questions>
+        <Question>
+          <Type>Tab</Type>
+          <Description>Questions</Description>
+          <Name>Tab (8)</Name>
+          <ToolId value="8" />
+          <Questions>
+            <Question>
+              <Type>MacroInput</Type>
+              <Description />
+              <Name>Macro Input (5)</Name>
+              <ToolId value="5" />
+            </Question>
+            <Question>
+              <Type>ControlParam</Type>
+              <Description>Control Parameter (9)</Description>
+              <Name>Control Parameter (9)</Name>
+              <ToolId value="9" />
+            </Question>
+            <Question>
+              <Type>MacroOutput</Type>
+              <Description />
+              <Name>Macro Output (13)</Name>
+              <ToolId value="13" />
+            </Question>
+          </Questions>
+        </Question>
+      </Questions>
+      <ModuleType>Macro</ModuleType>
+      <MacroCustomHelp value="False" />
+      <MacroDynamicOutputFields value="False" />
+      <MacroImageStd value="39" />
+      <MacroInputs />
+      <MacroOutputs />
+      <Wiz_CustomHelp value="False" />
+      <Wiz_CustomGraphic value="False" />
+      <Wiz_ShowOutput value="True" />
+      <Wiz_OpenOutputTools>
+        <Tool ToolId="13" Selected="False" />
+      </Wiz_OpenOutputTools>
+      <Wiz_OutputMessage />
+      <Wiz_NoOutputFilesMessage />
+      <Wiz_ChainRunWizard />
+    </RuntimeProperties>
+  </Properties>
+</AlteryxDocument>
