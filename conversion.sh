@@ -5,7 +5,11 @@ get_conversionStatus() {
 }
 get_fileToConvert() {
     printf "Getting file information...\n"
-    convFileName=$(curl -s 'https://api.dolley.cloud/webhook/media-conversion' --header "$webhook_auth")
+    filedetails=$(curl -s 'https://api.dolley.cloud/webhook/get-next-file' --header "$webhook_auth")
+    filedeets_source=$(echo $filedetails | jq -r '.source')
+    filedeets_id=$(echo $filedetails | jq -r '.id')
+    convFileName=$(echo $filedetails | jq -r '.filepath')
+
     #set file variables
     f_format=$(mediainfo --inform="General;%Video_Format_List%" "$convFileName")
     f_folder=$(mediainfo --inform="General;%FolderName%" "$convFileName")
@@ -19,6 +23,7 @@ get_transcodeFileDetails() {
     nf_filesize=$(mediainfo --inform="General;%FileSize%" "/conversions/$nf_filename")
     nf_duration=$(mediainfo --inform="General;%Duration%" "/conversions/$nf_filename")
     var_filesize=$((nf_filesize-f_filesize))
+    var_filesize_small=$((var_filesize/1000000000))
     var_duration=$((nf_duration-f_duration))
     min_duration=$(bc <<< "0.98*$f_duration/1")
     max_duration=$(bc <<< "1.02*$f_duration/1")
@@ -115,20 +120,20 @@ update_conversionStatus() {
     curl -s --request POST 'https://api.dolley.cloud/webhook/convert-status?status='$1 --header "$webhook_auth"
     printf "\n"
 }
-update_masterList() {
-    printf "Removing file from master list...\n"
-    curl -s 'https://api.dolley.cloud/webhook/remove-file' --header "$webhook_auth"
-    printf ".\n"
+transcode_body() {
+  cat <<EOF
+    {"source": "$filedeets_source","id": $filedeets_id,"comment": "$dataMessage"}
+EOF
 }
 post_results() {
     if [ $curlCode = "OK" ]; then
         curl -s --request POST 'https://api.dolley.cloud/webhook/result' --header 'Content-Type: application/json' --header "$webhook_auth" --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"'"$nf_filename"'","new_filesize":"'"$nf_filesize"'","new_duration":"'"$nf_duration"'","var_filesize":"'"$var_filesize"'","var_duration":"'"$var_duration"'","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}'
     fi 
-    
     if [ $curlCode = "ERR" ]; then
         curl -s --request POST 'https://api.dolley.cloud/webhook/result' --header 'Content-Type: application/json' --header "$webhook_auth" --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"","new_filesize":"","new_duration":"","var_filesize":"","var_duration":"","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}'
     fi
     printf ".\n"
+    curl -s -H "Content-Type:application/json" -H "$webhook_auth" -X POST --data "$(transcode_body)" "https://api.dolley.cloud/webhook/transcode_complete"
 }
 pausemuch() {
     read -p "$1 Press enter to continue..."
@@ -160,6 +165,7 @@ if [ $convStatus != "stopped" ]; then
             get_conversionStatus
             if [ $convStatus != "stopped" ]; then 
                 get_fileToConvert
+                #printf "Filename is: $convFileName\n"
                 #pausemuch "Last chance to cancel. You sure?"
                 if [ -f "$convFileName" ]; then 
                     convertFile
@@ -168,9 +174,8 @@ if [ $convStatus != "stopped" ]; then
                     post_results
                 else 
                     curlCode = "MISS"
-                    printf = "File does not exist. Transcode process skipped."
+                    printf "File does not exist. Transcode process skipped."
                 fi 
-                update_masterList
                 echo '--==|| Conversion Process Complete ||==--'
                 printf "\n"
             else 

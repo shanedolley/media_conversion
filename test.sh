@@ -1,6 +1,15 @@
 #!/bin/bash
-foldername="/mnt/plexmedia/Movies/The Deer Hunter (1978) {tmdb-11778}"
-filename=The Deer Hunter (1978) [Remux-1080p] {tmdb-11778}.mp4
-convFileName="$foldername/$filename"
+webhook_auth="Authorization:76ba4bf5-f9d0-4639-a45d-31d6b3a1ffe8"
+filedeets_source="sonarr"
+filedeets_id=123456789
+dataMessage="This is a: comment"
+curlCode="OK" 
 
-ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y "/conversions/$filename"
+transcode_body() 
+{
+  cat <<EOF
+    {"source": "$filedeets_source","id": $filedeets_id,"comment": "$dataMessage"}
+EOF
+}
+
+curl -s -H "$webhook_auth" -H "Content-Type: application/json" -X POST --data "$(transcode_body)" "https://api.dolley.cloud/webhook/transcode_complete"
