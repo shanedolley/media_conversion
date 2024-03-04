@@ -121,8 +121,13 @@ update_conversionStatus() {
     printf "\n"
 }
 transcode_body() {
+    if [ $curlCode = "OK" ]; then 
+        transcode_error = false
+    else 
+        transcode_error = true
+    fi 
   cat <<EOF
-    {"source": "$filedeets_source","id": $filedeets_id,"comment": "$dataMessage"}
+    {"source": "$filedeets_source","id": $filedeets_id,"filepath": "$f_folder/$nf_filename","comment": "$dataMessage","error":$transcode_error}
 EOF
 }
 post_results() {
