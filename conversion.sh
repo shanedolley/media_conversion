@@ -20,8 +20,8 @@ get_fileToConvert() {
     nf_filename="$f_filename"".mp4"
 }
 get_transcodeFileDetails() {
-    nf_filesize=$(mediainfo --inform="General;%FileSize%" "/conversions/$nf_filename")
-    nf_duration=$(mediainfo --inform="General;%Duration%" "/conversions/$nf_filename")
+    nf_filesize=$(mediainfo --inform="General;%FileSize%" "/other/conversions/$nf_filename")
+    nf_duration=$(mediainfo --inform="General;%Duration%" "/other/conversions/$nf_filename")
     var_filesize=$((nf_filesize-f_filesize))
     var_filesize_small=$((var_filesize/1000000000))
     var_duration=$((nf_duration-f_duration))
@@ -30,15 +30,15 @@ get_transcodeFileDetails() {
 }
 convertFile() {
     printf "Beginning transcode of $f_filename \n"
-    ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y -movflags +faststart "/conversions/$nf_filename"
+    ffmpeg -i "$convFileName" -c:v hevc_nvenc -c:a copy -stats -loglevel quiet -strict -2 -y -movflags +faststart "/other/conversions/$nf_filename"
     trans_code="$?"
 }
 process_convertedFile() {
     #check if transcoded file exists
-    if [ -f "/conversions/$nf_filename" ]; then
+    if [ -f "/other/conversions/$nf_filename" ]; then
         
         #check if transcode successful 
-        if [ $trans_code = 0 ] && [ -f "/conversions/$nf_filename" ];
+        if [ $trans_code = 0 ] && [ -f "/other/conversions/$nf_filename" ];
         then 
             printf "Transcode completed.\n"
             printf "Analysing transcoded file integrity...\n"
@@ -52,14 +52,14 @@ process_convertedFile() {
                         printf "Renaming original file...\n"
                         mv "$f_folder/$f_filename.$f_extension" "$f_folder/$f_filename.bak"
                         printf "Copying transcoded file...\n"
-                        cp -f "/conversions/$nf_filename" "$f_folder/$nf_filename"
+                        cp -f "/other/conversions/$nf_filename" "$f_folder/$nf_filename"
                         copy1_result="$?"
 
                         #verify copy success
                         if [ $copy1_result = 0 ]; then 
                             printf "Cleaning up...\n"
                             rm -f "$f_folder/$f_filename.bak"
-                            rm -f "/conversions/$nf_filename"
+                            rm -f "/other/conversions/$nf_filename"
                             dataMessage="Success: File converted and copied"
                             curlCode="OK"
                         else 
@@ -67,14 +67,14 @@ process_convertedFile() {
                             rm -f "$f_folder/$nf_filename"
                             
                             #try copy again
-                            cp -f "/conversions/$nf_filename" "$f_folder/$nf_filename"
+                            cp -f "/other/conversions/$nf_filename" "$f_folder/$nf_filename"
                             copy2_result="$?"
                             
                             #verify copy success v2
                             if [ $copy2_result = 0 ]; then
                                 printf "Cleaning up old files...\n"
                                 rm -f "$f_folder/$f_filename.bak"
-                                rm -f "/conversions/$nf_filename"
+                                rm -f "/other/conversions/$nf_filename"
                                 dataMessage="Success: File converted and copied on second try"
                                 curlCode="OK"
                             else 
@@ -89,7 +89,7 @@ process_convertedFile() {
                     else 
                         #ABORT - NO DISKSPACE GAIN
                         printf "No disk space gain from transcoding. Aborting...\n"
-                        rm -f "/conversions/$nf_filename"
+                        rm -f "/other/conversions/$nf_filename"
                         curlCode="OK"
                         dataMessage="Aborted: No diskspace gained"
                     fi
@@ -122,9 +122,9 @@ update_conversionStatus() {
 }
 transcode_body() {
     if [ $curlCode = "OK" ]; then 
-        transcode_error = false
+        transcode_error="false"
     else 
-        transcode_error = true
+        transcode_error="true"
     fi 
   cat <<EOF
     {"source": "$filedeets_source","id": $filedeets_id,"filepath": "$f_folder/$nf_filename","comment": "$dataMessage","error":$transcode_error}
@@ -170,24 +170,30 @@ if [ $convStatus != "stopped" ]; then
             get_conversionStatus
             if [ $convStatus != "stopped" ]; then 
                 get_fileToConvert
-                #printf "Filename is: $convFileName\n"
-                #pausemuch "Last chance to cancel. You sure?"
-                if [ -f "$convFileName" ]; then 
-                    convertFile
-                    get_transcodeFileDetails
-                    process_convertedFile
-                    post_results
+                if [[ $convFileName != null ]]; then 
+                    printf "Filename is: $convFileName\n"
+                    #pausemuch "Last chance to cancel. You sure?"
+                    if [ -f "$convFileName" ]; then 
+                        convertFile
+                        get_transcodeFileDetails
+                        process_convertedFile
+                        post_results
+                    else 
+                        curlCode="MISS"
+                        printf "File does not exist. Transcode process skipped."
+                    fi 
+                    echo '--==|| Conversion Process Complete ||==--'
+                    printf "\n"
                 else 
-                    curlCode = "MISS"
-                    printf "File does not exist. Transcode process skipped."
-                fi 
-                echo '--==|| Conversion Process Complete ||==--'
-                printf "\n"
+                    printf "No new files to transcode.  Pausing for 30 mins\n"
+                    sleep 1800
+                fi
             else 
                 printf "Conversion has been disabled. Ending process...\n"
                 exit
             fi
             reset_statuses
+            #pausemuch
         done
     update_conversionStatus waiting
 fi 
