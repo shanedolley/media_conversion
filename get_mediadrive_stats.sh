@@ -2,7 +2,7 @@
 
 json_body() {
     
-        df -Ph | grep plexmedia | \
+        df -P | grep plexmedia | \
         jq -R -s '
             [
             split("\n") |
@@ -14,4 +14,4 @@ json_body() {
             end
             ]'
 }
-    curl -s -H "Content-Type:application/json" -H "$webhook_auth" -X POST --data "$(json_body)" "https://api.dolley.cloud/webhook-test/media_space"
+    curl -s -H "Content-Type:application/json" -X POST --data "$(json_body)" "https://hookdeck.dolley.cloud/eluva9irjwevd0"

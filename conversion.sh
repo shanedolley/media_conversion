@@ -1,7 +1,7 @@
 #!/bin/bash
 webhook_auth="Authorization:76ba4bf5-f9d0-4639-a45d-31d6b3a1ffe8"
 get_conversionStatus() {
-    convStatus=$(curl -s 'https://api.dolley.cloud/webhook/convert-status' --header "$webhook_auth")
+    convStatus=$(curl -s 'https://api.dolley.cloud/webhook/convert-status')
 }
 get_fileToConvert() {
     printf "Getting file information...\n"
@@ -117,7 +117,7 @@ process_convertedFile() {
     fi
 }
 update_conversionStatus() {
-    curl -s --request POST 'https://api.dolley.cloud/webhook/convert-status?status='$1 --header "$webhook_auth"
+    curl -s --request POST 'https://hookdeck.dolley.cloud/zigxl7rj8qguci?status='$1 > /dev/null
     printf "\n"
 }
 transcode_body() {
@@ -132,13 +132,13 @@ EOF
 }
 post_results() {
     if [ $curlCode = "OK" ]; then
-        curl -s --request POST 'https://api.dolley.cloud/webhook/result' --header 'Content-Type: application/json' --header "$webhook_auth" --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"'"$nf_filename"'","new_filesize":"'"$nf_filesize"'","new_duration":"'"$nf_duration"'","var_filesize":"'"$var_filesize"'","var_duration":"'"$var_duration"'","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}'
+        curl -s --request POST 'https://hookdeck.dolley.cloud/43u34ajzvybt72' --header 'Content-Type: application/json' --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"'"$nf_filename"'","new_filesize":"'"$nf_filesize"'","new_duration":"'"$nf_duration"'","var_filesize":"'"$var_filesize"'","var_duration":"'"$var_duration"'","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}' > /dev/null
     fi 
     if [ $curlCode = "ERR" ]; then
-        curl -s --request POST 'https://api.dolley.cloud/webhook/result' --header 'Content-Type: application/json' --header "$webhook_auth" --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"","new_filesize":"","new_duration":"","var_filesize":"","var_duration":"","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}'
+        curl -s --request POST 'https://hookdeck.dolley.cloud/43u34ajzvybt72' --header 'Content-Type: application/json' --data '{"folder":"'"$f_folder"'","old_filename":"'"$convFileName"'","old_filesize":"'"$f_filesize"'","old_duration":"'"$f_duration"'","new_filename":"","new_filesize":"","new_duration":"","var_filesize":"","var_duration":"","result_code":"'"$trans_code"'","comment":"'"$dataMessage"'"}' > /dev/null
     fi
     printf ".\n"
-    curl -s -H "Content-Type:application/json" -H "$webhook_auth" -X POST --data "$(transcode_body)" "https://api.dolley.cloud/webhook/transcode_complete"
+    curl -s -H "Content-Type:application/json" -X POST --data "$(transcode_body)" "https://hookdeck.dolley.cloud/4txgk1rssvbxu5" > /dev/null
 }
 pausemuch() {
     read -p "$1 Press enter to continue..."
@@ -150,15 +150,16 @@ reset_statuses() {
 # check for stopped status
 get_conversionStatus
 if [ $convStatus = "stopped" ]; then 
-    #printf "Conversion is currently disabled. Please enable to begin conversion process.\n"
-    #exit 
-    printf "\nConversion is currently disabled.\nWould you like to enable conversion and proceed?\n\n"
-    select yn in "Yes" "No"; do 
-        case $yn in
-            Yes ) update_conversionStatus waiting; break;;
-            No ) exit;;
-        esac 
-    done 
+    printf "Conversion is currently disabled. Please enable to begin conversion process.\n"
+    #systemctl stop transcoding.service
+    exit 
+    # printf "\nConversion is currently disabled.\nWould you like to enable conversion and proceed?\n\n"
+    # select yn in "Yes" "No"; do 
+    #     case $yn in
+    #         Yes ) update_conversionStatus waiting; break;;
+    #         No ) exit;;
+    #     esac 
+    # done 
 fi 
 
 # begin conversion process
@@ -167,7 +168,7 @@ if [ $convStatus != "stopped" ]; then
     update_conversionStatus converting
     while [ $convStatus != "stopped" ]
         do 
-            get_conversionStatus
+            #get_conversionStatus
             if [ $convStatus != "stopped" ]; then 
                 get_fileToConvert
                 if [[ $convFileName != null ]]; then 
@@ -185,15 +186,15 @@ if [ $convStatus != "stopped" ]; then
                     echo '--==|| Conversion Process Complete ||==--'
                     printf "\n"
                 else 
-                    printf "No new files to transcode.  Pausing for 30 mins\n"
-                    sleep 1800
+                    printf "No new files to transcode.  Pausing for 30 secs\n"
+                    sleep 30
                 fi
             else 
                 printf "Conversion has been disabled. Ending process...\n"
+                update_conversionStatus stopped
                 exit
             fi
             reset_statuses
             #pausemuch
         done
-    update_conversionStatus waiting
 fi 
